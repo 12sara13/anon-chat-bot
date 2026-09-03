@@ -16,6 +16,7 @@ from telegram.ext import (
 import config
 import core
 import db
+import handlers_admin as ha
 import handlers_user as hu
 import keyboards as kb
 
@@ -34,30 +35,23 @@ logging.basicConfig(
 log = logging.getLogger("anonbot")
 
 
-def main() -> None:
-    # مقداردهی دیتابیس
-    db.init()
-    # گرفتن username ربات از API
-    app_builder = Application.builder().token(config.BOT_TOKEN)
-    app = app_builder.build()
-
-    async def get_bot_username(application: Application) -> None:
-        me = await application.bot.get_me()
-        core.BOT_USERNAME = me.username
-        log.info("Bot started: @%s", me.username)
-
-    app.post_init = get_bot_username
-
-    async def on_error(update, context) -> None:
-        log.error("handler error: %s", context.error, exc_info=context.error)
-
-    app.add_error_handler(on_error)
-
-    # هندلرها
+def register_handlers(app: Application) -> None:
+    """ثبت همه‌ی هندلرها — جدا شده تا قابل تست باشد."""
     app.add_handler(CommandHandler("start", hu.cmd_start))
     app.add_handler(CommandHandler("cancel", hu.cmd_cancel))
     app.add_handler(CommandHandler("id", hu.cmd_id))
     app.add_handler(CommandHandler("rules", hu.cmd_rules))
+
+    # پنل ادمین (روی همان گروه پیش‌فرض)
+    app.add_handler(CommandHandler("admin", ha.open_panel))
+    app.add_handler(MessageHandler(filters.Regex(f"^{kb.BTN_ADMIN}$"), ha.open_panel))
+    app.add_handler(CallbackQueryHandler(ha.on_cb, pattern=r"^a:"))
+
+    # ورودی متنی ادمین — group=-1 تا قبل از هندلرهای کاربر اجرا شود؛
+    # on_text اگر پیام مال او نبود بدون ApplicationHandlerStop برمی‌گردد.
+    app.add_handler(
+        MessageHandler(filters.ALL & ~filters.COMMAND, ha.on_text), group=-1
+    )
 
     # دکمه‌های کیبورد متنی
     app.add_handler(MessageHandler(filters.Regex(f"^{kb.BTN_LINK}$"), hu.show_link))
@@ -87,6 +81,29 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(hu.cb_delete_sent, pattern=r"^del:"))
     app.add_handler(CallbackQueryHandler(hu.cb_close, pattern=r"^close$"))
     app.add_handler(CallbackQueryHandler(hu.cb_noop, pattern=r"^noop$"))
+
+
+def main() -> None:
+    # مقداردهی دیتابیس
+    db.init()
+    # گرفتن username ربات از API
+    app_builder = Application.builder().token(config.BOT_TOKEN)
+    app = app_builder.build()
+
+    async def get_bot_username(application: Application) -> None:
+        me = await application.bot.get_me()
+        core.BOT_USERNAME = me.username
+        log.info("Bot started: @%s", me.username)
+
+    app.post_init = get_bot_username
+
+    async def on_error(update, context) -> None:
+        log.error("handler error: %s", context.error, exc_info=context.error)
+
+    app.add_error_handler(on_error)
+
+    # هندلرها
+    register_handlers(app)
 
     log.info("Starting bot...")
 

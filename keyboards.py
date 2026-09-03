@@ -22,6 +22,8 @@ def main_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
         [KeyboardButton(BTN_BLOCKS), KeyboardButton(BTN_STATS)],
         [KeyboardButton(BTN_SETTINGS), KeyboardButton(BTN_HELP)],
     ]
+    if is_admin:
+        rows.append([KeyboardButton(BTN_ADMIN)])
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
 
@@ -281,7 +283,7 @@ def reports_list_kb(rows, status: str, page: int, total: int, per: int = 5) -> M
     nav = []
     if page > 0:
         nav.append(B("◀️", callback_data=f"a:reports:{status}:{page-1}"))
-    nav.append(B(f"{page+1}/{total_pages}", callback_data="noop"))
+    nav.append(B(f"{page+1}/{total_pages}", callback_data="a:noop"))
     if page < total_pages - 1:
         nav.append(B("▶️", callback_data=f"a:reports:{status}:{page+1}"))
     kb.append(nav)
@@ -305,7 +307,7 @@ def reports_nav_kb(status: str, page: int, total: int, per: int = 5) -> M:
     nav = []
     if page > 0:
         nav.append(B("◀️", callback_data=f"a:reports:{status}:{page-1}"))
-    nav.append(B(f"{page+1}/{total_pages}", callback_data="noop"))
+    nav.append(B(f"{page+1}/{total_pages}", callback_data="a:noop"))
     if page < total_pages - 1:
         nav.append(B("▶️", callback_data=f"a:reports:{status}:{page+1}"))
     tabs = [
